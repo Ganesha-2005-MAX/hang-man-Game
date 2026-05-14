@@ -13,5 +13,9 @@ function Index() {
     if (loading) return;
     navigate({ to: user ? "/dashboard" : "/login" });
   }, [user, loading, navigate]);
-  return <div className="min-h-screen flex items-center justify-center bg-transparent text-foreground">Loading…</div>;
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-transparent text-foreground">
+      Loading…
+    </div>
+  );
 }

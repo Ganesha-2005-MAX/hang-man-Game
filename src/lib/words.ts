@@ -125,7 +125,7 @@ const WORDS: Record<Difficulty, { word: string; clue: string }[]> = {
 
 export function pickWord(difficulty: Difficulty) {
   const list = WORDS[difficulty];
-  
+
   // Get recently used words from localStorage to prevent immediate repeats
   let recent: string[] = [];
   try {
@@ -134,13 +134,13 @@ export function pickWord(difficulty: Difficulty) {
   } catch (e) {}
 
   // Filter out recent words if possible (only if we have enough words left to pick from)
-  const available = list.filter(w => !recent.includes(w.word));
+  const available = list.filter((w) => !recent.includes(w.word));
   const pool = available.length > 0 ? available : list;
-  
+
   const selected = pool[Math.floor(Math.random() * pool.length)];
 
   // Update recent list (keep last 10)
-  const nextRecent = [selected.word, ...recent.filter(w => w !== selected.word)].slice(0, 10);
+  const nextRecent = [selected.word, ...recent.filter((w) => w !== selected.word)].slice(0, 10);
   localStorage.setItem(`recent_words_${difficulty}`, JSON.stringify(nextRecent));
 
   return selected;

@@ -1,5 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, setPersistence, browserSessionPersistence } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  setPersistence,
+  browserSessionPersistence,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -9,7 +14,7 @@ const firebaseConfig = {
   storageBucket: "hang-man-4d4c2.firebasestorage.app",
   messagingSenderId: "782722006217",
   appId: "1:782722006217:web:88b7828359ae300eb02118",
-  measurementId: "G-SNVC9K6MP9"
+  measurementId: "G-SNVC9K6MP9",
 };
 
 const app = initializeApp(firebaseConfig);

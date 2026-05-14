@@ -3,7 +3,22 @@ import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/integrations/firebase/config";
-import { collection, addDoc, serverTimestamp, query, where, orderBy, getDocs, deleteDoc, limit, doc, getDoc, updateDoc, increment, setDoc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  deleteDoc,
+  limit,
+  doc,
+  getDoc,
+  updateDoc,
+  increment,
+  setDoc,
+} from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, Trophy, Clock, Lightbulb, Flag, HelpCircle, LogOut } from "lucide-react";
 import { HangmanFigure } from "@/components/HangmanFigure";
@@ -34,7 +49,9 @@ function GamePage() {
   const [score, setScore] = useState(0);
   const [ended, setEnded] = useState<null | "won" | "lost">(null);
 
-  useEffect(() => { if (!loading && !user) navigate({ to: "/login" }); }, [user, loading, navigate]);
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/login" });
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -44,7 +61,7 @@ function GamePage() {
 
   useEffect(() => {
     if (ended) return;
-    const t = setInterval(() => setTime(s => s + 1), 1000);
+    const t = setInterval(() => setTime((s) => s + 1), 1000);
     return () => clearInterval(t);
   }, [ended]);
 
@@ -60,10 +77,10 @@ function GamePage() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [ended, guessed]); // Added guessed to dependencies to ensure we have the latest set
 
-  const wrong = useMemo(() => [...guessed].filter(l => !word.includes(l)), [guessed, word]);
+  const wrong = useMemo(() => [...guessed].filter((l) => !word.includes(l)), [guessed, word]);
   const lives = cfg.lives - wrong.length;
   const wrongStages = Math.min(6, Math.ceil((wrong.length / cfg.lives) * 6));
-  const won = word.split("").every(l => guessed.has(l));
+  const won = word.split("").every((l) => guessed.has(l));
 
   useEffect(() => {
     if (ended) return;
@@ -89,7 +106,7 @@ function GamePage() {
         if (difficulty === "medium") statsUpdate.wins_medium = increment(1);
         if (difficulty === "hard") statsUpdate.wins_hard = increment(1);
       }
-      
+
       try {
         await updateDoc(profRef, statsUpdate);
       } catch (e) {
@@ -111,17 +128,19 @@ function GamePage() {
       const q = query(
         collection(db, "games"),
         where("user_id", "==", user.uid),
-        orderBy("created_at", "desc")
+        orderBy("created_at", "desc"),
       );
       const snap = await getDocs(q);
       if (snap.size > 10) {
         const toDelete = snap.docs.slice(10);
-        await Promise.all(toDelete.map(d => deleteDoc(d.ref)));
+        await Promise.all(toDelete.map((d) => deleteDoc(d.ref)));
       }
 
       checkAchievements();
     }
-    toast[didWin ? "success" : "error"](didWin ? `You won! +${final} pts` : `Out of lives. Word was ${word}`);
+    toast[didWin ? "success" : "error"](
+      didWin ? `You won! +${final} pts` : `Out of lives. Word was ${word}`,
+    );
   }
 
   function guess(letter: string) {
@@ -131,11 +150,11 @@ function GamePage() {
 
   function useHint() {
     if (hintsLeft <= 0 || ended) return;
-    const remaining = word.split("").filter(l => !guessed.has(l));
+    const remaining = word.split("").filter((l) => !guessed.has(l));
     if (!remaining.length) return;
     const reveal = remaining[Math.floor(Math.random() * remaining.length)];
-    setHintsLeft(h => h - 1);
-    setScore(s => Math.max(0, s - 5));
+    setHintsLeft((h) => h - 1);
+    setScore((s) => Math.max(0, s - 5));
     setGuessed(new Set(guessed).add(reveal));
   }
 
@@ -155,17 +174,28 @@ function GamePage() {
       <div className="max-w-6xl mx-auto rounded-3xl bg-card/30 backdrop-blur-md border border-white/20 shadow-[var(--shadow-soft)] p-6">
         {/* Header bar */}
         <div className="flex flex-wrap items-center gap-3 justify-between bg-white/10 backdrop-blur-sm rounded-2xl p-3">
-          <button onClick={() => navigate({ to: "/dashboard" })} className="flex items-center gap-2 font-semibold text-foreground hover:text-primary">
+          <button
+            onClick={() => navigate({ to: "/dashboard" })}
+            className="flex items-center gap-2 font-semibold text-foreground hover:text-primary"
+          >
             <ArrowLeft className="w-4 h-4" /> Dashboard
           </button>
           <div className="flex items-center gap-5 font-bold">
-            <Stat icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />} label="Lives" value={lives} />
+            <Stat
+              icon={<Heart className="w-5 h-5 text-destructive fill-destructive" />}
+              label="Lives"
+              value={lives}
+            />
             <Stat icon={<Trophy className="w-5 h-5 text-warning" />} label="Score" value={score} />
             <Stat icon={<Clock className="w-5 h-5 text-success" />} label="Time" value={fmt} />
           </div>
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10 font-bold text-sm flex items-center gap-1"><Lightbulb className="w-4 h-4 text-warning" /> {hintsLeft} Hints</span>
-            <button className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors grid place-items-center text-muted-foreground"><HelpCircle className="w-4 h-4" /></button>
+            <span className="px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10 font-bold text-sm flex items-center gap-1">
+              <Lightbulb className="w-4 h-4 text-warning" /> {hintsLeft} Hints
+            </span>
+            <button className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors grid place-items-center text-muted-foreground">
+              <HelpCircle className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -177,7 +207,9 @@ function GamePage() {
           </div>
 
           {/* Hangman */}
-          <div className="text-foreground"><HangmanFigure wrongCount={wrongStages} /></div>
+          <div className="text-foreground">
+            <HangmanFigure wrongCount={wrongStages} />
+          </div>
 
           {/* Progress */}
           <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm p-4">
@@ -186,8 +218,15 @@ function GamePage() {
               {PARTS.map((p, i) => {
                 const done = i < wrongStages;
                 return (
-                  <li key={p} className={`flex items-center gap-2 ${done ? "text-foreground" : "text-muted-foreground"}`}>
-                    <span className={`w-5 h-5 rounded-full grid place-items-center text-xs shadow-sm ${done ? "bg-success text-white" : "bg-white/20 text-muted-foreground"}`}>{done ? "✓" : ""}</span>
+                  <li
+                    key={p}
+                    className={`flex items-center gap-2 ${done ? "text-foreground" : "text-muted-foreground"}`}
+                  >
+                    <span
+                      className={`w-5 h-5 rounded-full grid place-items-center text-xs shadow-sm ${done ? "bg-success text-white" : "bg-white/20 text-muted-foreground"}`}
+                    >
+                      {done ? "✓" : ""}
+                    </span>
                     {p}
                   </li>
                 );
@@ -199,7 +238,10 @@ function GamePage() {
         {/* Word */}
         <div className="flex justify-center gap-2 mt-6 flex-wrap">
           {word.split("").map((l, i) => (
-            <div key={i} className="w-12 h-14 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 shadow-sm flex items-center justify-center text-2xl font-black text-success">
+            <div
+              key={i}
+              className="w-12 h-14 rounded-xl bg-white/40 backdrop-blur-sm border border-white/30 shadow-sm flex items-center justify-center text-2xl font-black text-success"
+            >
               {guessed.has(l) || ended === "lost" ? l : ""}
             </div>
           ))}
@@ -207,16 +249,24 @@ function GamePage() {
 
         {/* Keyboard */}
         <div className="mt-6 space-y-2">
-          {ROWS.map(row => (
+          {ROWS.map((row) => (
             <div key={row} className="flex justify-center gap-1.5">
-              {row.split("").map(l => {
+              {row.split("").map((l) => {
                 const isG = guessed.has(l);
                 const correct = isG && word.includes(l);
                 const wrong = isG && !word.includes(l);
-                const cls = correct ? "bg-success text-white border-success" : wrong ? "bg-destructive text-white border-destructive" : "bg-white/40 backdrop-blur-sm hover:bg-white/60 text-foreground border-white/30";
+                const cls = correct
+                  ? "bg-success text-white border-success"
+                  : wrong
+                    ? "bg-destructive text-white border-destructive"
+                    : "bg-white/40 backdrop-blur-sm hover:bg-white/60 text-foreground border-white/30";
                 return (
-                  <button key={l} disabled={isG || !!ended} onClick={() => guess(l)}
-                    className={`w-10 h-12 sm:w-12 sm:h-14 rounded-xl border-2 font-black text-lg shadow-sm transition disabled:opacity-90 ${cls}`}>
+                  <button
+                    key={l}
+                    disabled={isG || !!ended}
+                    onClick={() => guess(l)}
+                    className={`w-10 h-12 sm:w-12 sm:h-14 rounded-xl border-2 font-black text-lg shadow-sm transition disabled:opacity-90 ${cls}`}
+                  >
                     {l}
                   </button>
                 );
@@ -228,13 +278,25 @@ function GamePage() {
         {/* Action buttons */}
         <div className="flex justify-center gap-4 mt-6">
           {ended ? (
-            <Button onClick={newGame} className="bg-success hover:bg-success/90 text-white h-12 px-8 font-bold">Play Again</Button>
+            <Button
+              onClick={newGame}
+              className="bg-success hover:bg-success/90 text-white h-12 px-8 font-bold"
+            >
+              Play Again
+            </Button>
           ) : (
             <>
-              <Button onClick={useHint} disabled={hintsLeft === 0} className="bg-info hover:bg-info/90 text-white h-12 px-6 font-bold">
+              <Button
+                onClick={useHint}
+                disabled={hintsLeft === 0}
+                className="bg-info hover:bg-info/90 text-white h-12 px-6 font-bold"
+              >
                 <Lightbulb className="w-4 h-4 mr-2" /> Hint (-5 pts)
               </Button>
-              <Button onClick={() => finish(false)} className="bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 h-12 px-6 font-bold">
+              <Button
+                onClick={() => finish(false)}
+                className="bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 h-12 px-6 font-bold"
+              >
                 <LogOut className="w-4 h-4 mr-2" /> Quit
               </Button>
             </>
@@ -245,7 +307,15 @@ function GamePage() {
   );
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+function Stat({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div className="flex items-center gap-2">
       {icon}

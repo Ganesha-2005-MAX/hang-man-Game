@@ -29,22 +29,26 @@ A high-fidelity, feature-rich Hangman game built with a focus on premium aesthet
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - A Firebase project
 
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone [repository-url]
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Create a `.env` file in the root and add your Firebase configuration:
+
    ```env
    VITE_FIREBASE_API_KEY=your_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
