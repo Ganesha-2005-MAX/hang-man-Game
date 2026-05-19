@@ -2,6 +2,8 @@
 
 A high-fidelity, feature-rich Hangman game built with a focus on premium aesthetics, deep gamification, and a smooth user experience. This project features a sophisticated 7-view dashboard, real-time global leaderboards, and an extensive achievement system.
 
+🚀 **[Play the Live Demo Here!](https://ganeshhangman.vercel.app)**
+
 ## ✨ Features
 
 - 🏆 **Advanced Gamification**: Earn 25+ unique badges across 5 categories. Track your score and climb the ranks from Rookie to Master.
