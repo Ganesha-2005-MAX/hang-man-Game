@@ -17,7 +17,7 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
-type Profile = { id: string; username: string };
+type Profile = { id: string; username: string | undefined };
 type GameRow = { won: boolean; points: number; user_id: string; word: string; difficulty: string; created_at: any };
 
 function rankFor(points: number) {
@@ -33,6 +33,8 @@ function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [myStats, setMyStats] = useState({ score: 0, played: 0, won: 0 });
   const [leaders, setLeaders] = useState<{ profile: Profile; points: number }[]>([]);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [earnedAchIds, setEarnedAchIds] = useState<Set<string>>(new Set());
   const [currentView, setCurrentView] = useState<"dashboard" | "achievements" | "leaderboard" | "history" | "settings" | "help" | "multiplayer">("dashboard");
   const [myHistory, setMyHistory] = useState<GameRow[]>([]);
@@ -43,40 +45,49 @@ function Dashboard() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [pSnap, gSnap, profsSnap, achsSnap] = await Promise.all([
-        getDoc(doc(db, "profiles", user.uid)),
-        getDocs(collection(db, "games")),
-        getDocs(collection(db, "profiles")),
-        getDocs(query(collection(db, "user_achievements"), where("user_id", "==", user.uid))),
-      ]);
-      
-      if (pSnap.exists()) {
-        const d = pSnap.data() as any;
-        setProfile({ id: pSnap.id, ...d } as Profile);
-        if (d.settings) setLocalSettings({ ...localSettings, ...d.settings });
+      try {
+        const [pSnap, gSnap, profsSnap, achsSnap] = await Promise.all([
+          getDoc(doc(db, "profiles", user.uid)),
+          getDocs(collection(db, "games")),
+          getDocs(collection(db, "profiles")),
+          getDocs(query(collection(db, "user_achievements"), where("user_id", "==", user.uid))),
+        ]);
         
-        const totalWon = (d.wins_easy || 0) + (d.wins_medium || 0) + (d.wins_hard || 0);
-        setMyStats({
-          score: d.total_score || 0,
-          played: d.total_games || 0,
-          won: totalWon,
-        });
-      }
-      
-      setEarnedAchIds(new Set(achsSnap.docs.map(d => (d.data() as any).achievement_id)));
+        if (pSnap.exists()) {
+          const d = pSnap.data() as any;
+          setProfile({ id: pSnap.id, ...d } as Profile);
+          if (d.settings) setLocalSettings({ ...localSettings, ...d.settings });
+          
+          const totalWon = (d.wins_easy || 0) + (d.wins_medium || 0) + (d.wins_hard || 0);
+          setMyStats({
+            score: d.total_score || 0,
+            played: d.total_games || 0,
+            won: totalWon,
+          });
+        }
+        
+        setEarnedAchIds(new Set(achsSnap.docs.map(d => (d.data() as any).achievement_id)));
 
-      const all: GameRow[] = gSnap.docs.map(d => d.data() as GameRow);
-      const mine = all.filter(g => g.user_id === user.uid).sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
-      setMyHistory(mine);
-      
-      const ranked = profsSnap.docs.map(d => {
-        const data = d.data() as any;
-        return { 
-          profile: { id: d.id, ...data } as Profile, 
-          points: data.total_score || 0 
-        };
-      }).sort((a, b) => b.points - a.points).slice(0, 10);
-      setLeaders(ranked);
+        const all: GameRow[] = gSnap.docs.map(d => d.data() as GameRow);
+        const mine = all.filter(g => g.user_id === user.uid).sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
+        setMyHistory(mine);
+        
+        const ranked = profsSnap.docs
+          .map(d => {
+            const data = d.data() as any;
+            return { 
+              profile: { ...data, id: d.id, username: data.username || "Player" } as Profile, 
+              points: data.total_score || 0 
+            };
+          })
+          .sort((a, b) => b.points - a.points)
+          .slice(0, 10);
+        setLeaders(ranked);
+        setLeaderboardError(null);
+      } catch (err: any) {
+        console.error("Dashboard data fetch error:", err);
+        setLeaderboardError(err?.message || "Failed to load leaderboard data.");
+      }
     })();
   }, [user]);
 
@@ -305,43 +316,61 @@ function Dashboard() {
                 <div className="flex items-center gap-3 font-bold text-xl"><Trophy className="w-6 h-6 text-warning" /> Global Leaderboard</div>
                 <div className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Season 1</div>
               </div>
-              
-              <div className="bg-white/10 rounded-2xl border border-white/10 overflow-hidden">
-                <div className="grid grid-cols-[80px_1fr_120px_120px] p-4 border-b border-white/10 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                  <div>Rank</div>
-                  <div>Player</div>
-                  <div className="text-center">Rank</div>
-                  <div className="text-right">Score</div>
+
+              {leaderboardError ? (
+                <div className="text-center py-12 text-destructive bg-destructive/5 rounded-2xl border border-destructive/20">
+                  <Trophy className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p className="font-bold">Could not load leaderboard</p>
+                  <p className="text-xs text-muted-foreground mt-1">{leaderboardError}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Check your Firestore security rules — the <strong>profiles</strong> collection may not allow reads.</p>
                 </div>
-                
-                <div className="divide-y divide-white/5">
-                  {(leaders.length > 0 ? leaders : []).map((l, i) => {
-                    const r = rankFor(l.points);
-                    const isMe = l.profile.id === user?.uid;
-                    const medal = i === 0 ? "text-warning" : i === 1 ? "text-slate-400" : i === 2 ? "text-orange-400" : "text-muted-foreground";
-                    
-                    return (
-                      <div key={l.profile.id} className={`grid grid-cols-[80px_1fr_120px_120px] items-center p-4 transition hover:bg-white/5 ${isMe ? "bg-warning/10" : ""}`}>
-                        <div className={`text-2xl font-black ${medal}`}>{i + 1}</div>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarFallback className="bg-primary/20 text-primary font-black text-xs">
-                              {l.profile.username.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-bold text-foreground">{l.profile.username}</span>
-                        </div>
-                        <div className="flex justify-center">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.color}`}>
-                            <r.icon className="w-3 h-3" /> {r.label}
-                          </span>
-                        </div>
-                        <div className="text-right font-black text-success text-lg">{l.points} pts</div>
-                      </div>
-                    );
-                  })}
+              ) : leaders.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground bg-white/5 rounded-2xl border border-dashed border-white/10">
+                  <Trophy className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                  <p className="font-bold">No players yet</p>
+                  <p className="text-xs mt-1">Be the first on the board — play a game!</p>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-white/10 rounded-2xl border border-white/10 overflow-hidden">
+                  <div className="grid grid-cols-[80px_1fr_120px_120px] p-4 border-b border-white/10 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <div>Rank</div>
+                    <div>Player</div>
+                    <div className="text-center">Tier</div>
+                    <div className="text-right">Score</div>
+                  </div>
+                  
+                  <div className="divide-y divide-white/5">
+                    {leaders.map((l, i) => {
+                      const r = rankFor(l.points);
+                      const isMe = l.profile.id === user?.uid;
+                      const medal = i === 0 ? "text-warning" : i === 1 ? "text-slate-400" : i === 2 ? "text-orange-400" : "text-muted-foreground";
+                      const displayName = l.profile.username || "Player";
+                      
+                      return (
+                        <div key={l.profile.id} className={`grid grid-cols-[80px_1fr_120px_120px] items-center p-4 transition hover:bg-white/5 ${isMe ? "bg-warning/10" : ""}`}>
+                          <div className={`text-2xl font-black ${medal}`}>{i + 1}</div>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarFallback className="bg-primary/20 text-primary font-black text-xs">
+                                {displayName.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-bold text-foreground">
+                              {displayName}{isMe && <span className="ml-2 text-[10px] font-black text-warning uppercase tracking-widest">(You)</span>}
+                            </span>
+                          </div>
+                          <div className="flex justify-center">
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.color}`}>
+                              <r.icon className="w-3 h-3" /> {r.label}
+                            </span>
+                          </div>
+                          <div className="text-right font-black text-success text-lg">{l.points} pts</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </Card>
           ) : currentView === "history" ? (
             /* History View */
